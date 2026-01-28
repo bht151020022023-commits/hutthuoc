@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Login</title>
+</head>
+<body>
+
+<h2>Đăng nhập</h2>
+
+<input type="email" id="email" placeholder="Email"><br><br>
+<input type="password" id="password" placeholder="Password"><br><br>
+
+<button onclick="signUp()">Đăng ký</button>
+<button onclick="signIn()">Đăng nhập</button>
+
+<p id="msg"></p>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+  const SUPABASE_URL = "https://xvngdxnrezlycdinvvpn.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_ck_TXnPU_0GCKjse13Wdtg_YC3UMMCm";
+
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  async function signUp() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    const { error } = await supabase.auth.signUp({ email, password });
+
+    document.getElementById("msg").innerText =
+      error ? error.message : "Đăng ký thành công!";
+  }
+
+  async function signIn() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    document.getElementById("msg").innerText =
+      error ? error.message : "Đăng nhập thành công!";
+  }
+</script>
+
+</body>
+</html>

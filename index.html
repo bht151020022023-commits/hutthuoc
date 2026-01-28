@@ -8,14 +8,16 @@
 
   <h2>Theo dõi hút thuốc 🚬</h2>
   <button onclick="saveCigarette()">Hút 1 điếu</button>
+
   <p id="status"></p>
+  <p>Hôm nay: <b id="todayCount">0</b> điếu</p>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp }
+    import { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, where }
       from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // 🔥 Firebase config của bạn
+    // 🔥 Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDwtA79IFYdkwvIjiAE2L3dURDMYzhmmKo",
       authDomain: "test-fd8ca.firebaseapp.com",
@@ -28,7 +30,17 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // 🚬 Hàm lưu điếu thuốc
+    // 📊 Đếm số điếu hôm nay
+    async function loadTodayCount() {
+      const today = new Date().toLocaleDateString();
+      const q = query(collection(db, "cigarettes"), where("date", "==", today));
+      const snap = await getDocs(q);
+      document.getElementById("todayCount").innerText = snap.size;
+    }
+
+    loadTodayCount();
+
+    // 🚬 Lưu điếu thuốc
     window.saveCigarette = async function () {
       try {
         await addDoc(collection(db, "cigarettes"), {
@@ -37,6 +49,8 @@
         });
 
         document.getElementById("status").innerText = "Đã lưu 1 điếu 🚬";
+        loadTodayCount();
+
       } catch (error) {
         document.getElementById("status").innerText = "Lỗi kết nối Firebase!";
         console.error(error);

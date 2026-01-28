@@ -6,70 +6,53 @@
 </head>
 <body>
 
-<div id="authBox">
-  <h2>Đăng nhập</h2>
-  <input id="email" placeholder="Email"><br><br>
-  <input id="password" type="password" placeholder="Password"><br><br>
-  <button onclick="login()">Đăng nhập</button>
-  <button onclick="register()">Đăng ký</button>
-  <p id="authMsg"></p>
-</div>
+<h2>Đăng nhập</h2>
+<input id="email" placeholder="Email"><br><br>
+<input id="password" type="password" placeholder="Password"><br><br>
+<button onclick="login()">Đăng nhập</button>
+<button onclick="register()">Đăng ký</button>
 
-<div id="app" style="display:none;">
-  <h2>Theo dõi hút thuốc 🚬</h2>
-  <button onclick="saveCigarette()">Hút 1 điếu</button>
-  <p id="status"></p>
-  <button onclick="logout()">Đăng xuất</button>
-</div>
+<p id="msg"></p>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDwtA79TFYdkywIijAE2L3dURDmYzhmmKo",
+  apiKey: "AIzaSyDwta79lFYdkvWljiAE2L3dURDmhzmmK0",
   authDomain: "test-fd8ca.firebaseapp.com",
-  databaseURL: "https://test-fd8ca-default-rtdb.firebaseio.com",
   projectId: "test-fd8ca",
-  storageBucket: "test-fd8ca.firebasestorage.app",
+  storageBucket: "test-fd8ca.appspot.com",
   messagingSenderId: "519710381007",
-  appId: "1:519710381007:web:b883b094ba7b829a1278ba"
+  appId: "1:519710381007:web:b83b094ba7b829a178ba"
 };
-
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
 
-window.login = async () => {
-  try {
-    await signInWithEmailAndPassword(auth, email.value, password.value);
-  } catch (e) { authMsg.innerText = e.message; }
-};
+window.login = function() {
+  const email = emailInput.value;
+  const pass = passwordInput.value;
 
-window.register = async () => {
-  try {
-    await createUserWithEmailAndPassword(auth, email.value, password.value);
-  } catch (e) { authMsg.innerText = e.message; }
-};
+  signInWithEmailAndPassword(auth, email, pass)
+    .then(() => msg.textContent = "Đăng nhập thành công")
+    .catch(e => msg.textContent = e.message);
+}
 
-window.logout = () => signOut(auth);
+window.register = function() {
+  const email = emailInput.value;
+  const pass = passwordInput.value;
 
-window.saveCigarette = async () => {
-  await addDoc(collection(db, "cigarettes"), {
-    time: serverTimestamp(),
-    date: new Date().toLocaleDateString()
-  });
-  status.innerText = "Đã lưu 1 điếu 🚬";
-};
+  createUserWithEmailAndPassword(auth, email, pass)
+    .then(() => msg.textContent = "Tạo tài khoản thành công")
+    .catch(e => msg.textContent = e.message);
+}
 
-onAuthStateChanged(auth, user => {
-  authBox.style.display = user ? "none" : "block";
-  app.style.display = user ? "block" : "none";
-});
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+const msg = document.getElementById("msg");
+
 </script>
 
 </body>
 </html>
-

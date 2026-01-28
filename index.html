@@ -15,25 +15,32 @@
     import { getFirestore, collection, addDoc, serverTimestamp }
       from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+    // 🔥 CONFIG FIREBASE CỦA BẠN
     const firebaseConfig = {
-    apiKey: "AIzaSyDwtA79IFYdkywlijAE2L3dURDmYzhmmKo",
-    authDomain: "test-fd8ca.firebaseapp.com",
-    projectId: "test-fd8ca",
-    storageBucket: "test-fd8ca.firebasestorage.app",
-    messagingSenderId: "519710381007",
-    appId: "1:519710381007:web:b883b094ba7b829a1278ba"
-  };
+      apiKey: "AIzaSyDwtA79IFYdkwvIjiAE2L3dURDMYzhmmKo",
+      authDomain: "test-fd8ca.firebaseapp.com",
+      projectId: "test-fd8ca",
+      storageBucket: "test-fd8ca.firebasestorage.app",
+      messagingSenderId: "51971038107",
+      appId: "1:51971038107:web:b883b094ab7b829a1278ba"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    // 🚬 Hàm lưu điếu thuốc
     window.saveCigarette = async function () {
-      await addDoc(collection(db, "cigarettes"), {
-        time: serverTimestamp(),
-        date: new Date().toLocaleDateString()
-      });
+      try {
+        await addDoc(collection(db, "cigarettes"), {
+          time: serverTimestamp(),
+          date: new Date().toLocaleDateString()
+        });
 
-      document.getElementById("status").innerText = "Đã lưu 1 điếu 🚬";
+        document.getElementById("status").innerText = "Đã lưu 1 điếu 🚬";
+      } catch (error) {
+        document.getElementById("status").innerText = "Lỗi kết nối Firebase!";
+        console.error(error);
+      }
     }
   </script>
 

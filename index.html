@@ -48,52 +48,59 @@
       signOut
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
+    // 🔥 CONFIG ĐÚNG PROJECT CỦA BẠN
     const firebaseConfig = {
       apiKey: "AIzaSyDwtA79IFYdkwvIjiAE2L3dURDMYzhmmKo",
       authDomain: "test-fd8ca.firebaseapp.com",
+      databaseURL: "https://test-fd8ca-default-rtdb.firebaseio.com",
       projectId: "test-fd8ca",
       storageBucket: "test-fd8ca.firebasestorage.app",
       messagingSenderId: "51971038107",
       appId: "1:51971038107:web:b883b094ab7b829a1278ba"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
+    const appFirebase = initializeApp(firebaseConfig);
+    const db = getFirestore(appFirebase);
+    const auth = getAuth(appFirebase);
 
-    // 🔐 LOGIN / REGISTER
+    // 🔐 LOGIN
     window.login = async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
       try {
-        await signInWithEmailAndPassword(auth, email.value, password.value);
+        await signInWithEmailAndPassword(auth, email, password);
       } catch (e) {
-        authStatus.innerText = e.message;
+        document.getElementById("authStatus").innerText = e.message;
       }
     };
 
+    // 🔐 REGISTER
     window.register = async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
       try {
-        await createUserWithEmailAndPassword(auth, email.value, password.value);
+        await createUserWithEmailAndPassword(auth, email, password);
       } catch (e) {
-        authStatus.innerText = e.message;
+        document.getElementById("authStatus").innerText = e.message;
       }
     };
 
     window.logout = () => signOut(auth);
 
-    // 👤 AUTH STATE
+    // 👤 TRẠNG THÁI ĐĂNG NHẬP
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        authBox.style.display = "none";
-        app.style.display = "block";
+        document.getElementById("authBox").style.display = "none";
+        document.getElementById("app").style.display = "block";
         loadTodayCount();
         loadLastTime();
       } else {
-        authBox.style.display = "block";
-        app.style.display = "none";
+        document.getElementById("authBox").style.display = "block";
+        document.getElementById("app").style.display = "none";
       }
     });
 
-    // 📊 Đếm số điếu hôm nay
+    // 📊 Đếm hôm nay
     async function loadTodayCount() {
       const today = new Date().toLocaleDateString();
       const q = query(
@@ -101,7 +108,7 @@
         where("date", "==", today)
       );
       const snap = await getDocs(q);
-      todayCount.innerText = snap.size;
+      document.getElementById("todayCount").innerText = snap.size;
     }
 
     // ⏱ Lần hút trước
@@ -122,7 +129,8 @@
       const hrs = Math.floor(mins / 60);
       const rem = mins % 60;
 
-      lastTime.innerText = hrs > 0 ? `${hrs}h ${rem}m trước` : `${rem} phút trước`;
+      document.getElementById("lastTime").innerText =
+        hrs > 0 ? `${hrs}h ${rem}m trước` : `${rem} phút trước`;
     }
 
     // 🚬 Lưu điếu thuốc
@@ -132,11 +140,11 @@
           time: serverTimestamp(),
           date: new Date().toLocaleDateString()
         });
-        status.innerText = "Đã lưu 1 điếu 🚬";
+        document.getElementById("status").innerText = "Đã lưu 1 điếu 🚬";
         loadTodayCount();
         loadLastTime();
       } catch (e) {
-        status.innerText = "Lỗi kết nối Firebase!";
+        document.getElementById("status").innerText = "Lỗi Firebase!";
       }
     };
   </script>

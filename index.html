@@ -6,12 +6,26 @@
 </head>
 <body>
 
-  <h2>Theo dõi hút thuốc 🚬</h2>
-  <button onclick="saveCigarette()">Hút 1 điếu</button>
+  <!-- 🔐 LOGIN -->
+  <div id="authBox">
+    <h3>Đăng nhập</h3>
+    <input id="email" placeholder="Email" />
+    <input id="password" type="password" placeholder="Mật khẩu" />
+    <button onclick="login()">Đăng nhập</button>
+    <button onclick="register()">Đăng ký</button>
+    <p id="authStatus"></p>
+  </div>
 
-  <p id="status"></p>
-  <p>Hôm nay: <b id="todayCount">0</b> điếu</p>
-  <p>Lần hút trước: <b id="lastTime">--</b></p>
+  <!-- 🚬 APP -->
+  <div id="app" style="display:none;">
+    <h2>Theo dõi hút thuốc 🚬</h2>
+    <button onclick="saveCigarette()">Hút 1 điếu</button>
+    <button onclick="logout()">Đăng xuất</button>
+
+    <p id="status"></p>
+    <p>Hôm nay: <b id="todayCount">0</b> điếu</p>
+    <p>Lần hút trước: <b id="lastTime">--</b></p>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -26,6 +40,13 @@
       orderBy,
       limit
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDwtA79IFYdkwvIjiAE2L3dURDMYzhmmKo",
@@ -38,53 +59,84 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // 🔐 LOGIN / REGISTER
+    window.login = async () => {
+      try {
+        await signInWithEmailAndPassword(auth, email.value, password.value);
+      } catch (e) {
+        authStatus.innerText = e.message;
+      }
+    };
+
+    window.register = async () => {
+      try {
+        await createUserWithEmailAndPassword(auth, email.value, password.value);
+      } catch (e) {
+        authStatus.innerText = e.message;
+      }
+    };
+
+    window.logout = () => signOut(auth);
+
+    // 👤 AUTH STATE
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        authBox.style.display = "none";
+        app.style.display = "block";
+        loadTodayCount();
+        loadLastTime();
+      } else {
+        authBox.style.display = "block";
+        app.style.display = "none";
+      }
+    });
 
     // 📊 Đếm số điếu hôm nay
     async function loadTodayCount() {
       const today = new Date().toLocaleDateString();
-      const q = query(collection(db, "cigarettes"), where("date", "==", today));
+      const q = query(
+        collection(db, "users", auth.currentUser.uid, "cigarettes"),
+        where("date", "==", today)
+      );
       const snap = await getDocs(q);
-      document.getElementById("todayCount").innerText = snap.size;
+      todayCount.innerText = snap.size;
     }
 
-    // ⏱ Tính thời gian từ lần hút trước
+    // ⏱ Lần hút trước
     async function loadLastTime() {
-      const q = query(collection(db, "cigarettes"), orderBy("time", "desc"), limit(2));
+      const q = query(
+        collection(db, "users", auth.currentUser.uid, "cigarettes"),
+        orderBy("time", "desc"),
+        limit(2)
+      );
       const snap = await getDocs(q);
-
       if (snap.size < 2) return;
 
-      const docs = snap.docs;
-      const latest = docs[0].data().time.toDate();
-      const previous = docs[1].data().time.toDate();
+      const latest = snap.docs[0].data().time.toDate();
+      const previous = snap.docs[1].data().time.toDate();
 
       const diffMs = latest - previous;
       const mins = Math.floor(diffMs / 60000);
       const hrs = Math.floor(mins / 60);
-      const remMins = mins % 60;
+      const rem = mins % 60;
 
-      document.getElementById("lastTime").innerText =
-        hrs > 0 ? `${hrs}h ${remMins}m trước` : `${remMins} phút trước`;
+      lastTime.innerText = hrs > 0 ? `${hrs}h ${rem}m trước` : `${rem} phút trước`;
     }
 
-    loadTodayCount();
-    loadLastTime();
-
     // 🚬 Lưu điếu thuốc
-    window.saveCigarette = async function () {
+    window.saveCigarette = async () => {
       try {
-        await addDoc(collection(db, "cigarettes"), {
+        await addDoc(collection(db, "users", auth.currentUser.uid, "cigarettes"), {
           time: serverTimestamp(),
           date: new Date().toLocaleDateString()
         });
-
-        document.getElementById("status").innerText = "Đã lưu 1 điếu 🚬";
+        status.innerText = "Đã lưu 1 điếu 🚬";
         loadTodayCount();
         loadLastTime();
-
-      } catch (error) {
-        document.getElementById("status").innerText = "Lỗi kết nối Firebase!";
-        console.error(error);
+      } catch (e) {
+        status.innerText = "Lỗi kết nối Firebase!";
       }
     };
   </script>

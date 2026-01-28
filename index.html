@@ -11,13 +11,22 @@
 
   <p id="status"></p>
   <p>Hôm nay: <b id="todayCount">0</b> điếu</p>
+  <p>Lần hút trước: <b id="lastTime">--</b></p>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, where }
-      from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      serverTimestamp,
+      getDocs,
+      query,
+      where,
+      orderBy,
+      limit
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // 🔥 Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDwtA79IFYdkwvIjiAE2L3dURDMYzhmmKo",
       authDomain: "test-fd8ca.firebaseapp.com",
@@ -38,7 +47,28 @@
       document.getElementById("todayCount").innerText = snap.size;
     }
 
+    // ⏱ Tính thời gian từ lần hút trước
+    async function loadLastTime() {
+      const q = query(collection(db, "cigarettes"), orderBy("time", "desc"), limit(2));
+      const snap = await getDocs(q);
+
+      if (snap.size < 2) return;
+
+      const docs = snap.docs;
+      const latest = docs[0].data().time.toDate();
+      const previous = docs[1].data().time.toDate();
+
+      const diffMs = latest - previous;
+      const mins = Math.floor(diffMs / 60000);
+      const hrs = Math.floor(mins / 60);
+      const remMins = mins % 60;
+
+      document.getElementById("lastTime").innerText =
+        hrs > 0 ? `${hrs}h ${remMins}m trước` : `${remMins} phút trước`;
+    }
+
     loadTodayCount();
+    loadLastTime();
 
     // 🚬 Lưu điếu thuốc
     window.saveCigarette = async function () {
@@ -50,6 +80,7 @@
 
         document.getElementById("status").innerText = "Đã lưu 1 điếu 🚬";
         loadTodayCount();
+        loadLastTime();
 
       } catch (error) {
         document.getElementById("status").innerText = "Lỗi kết nối Firebase!";

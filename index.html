@@ -6,23 +6,17 @@
 <style>
 body { font-family: Arial; background:#0f172a; color:white; text-align:center; }
 h1 { color:#38bdf8; }
-.stats { margin:15px; font-size:18px; }
-
-.goalBox { margin:15px auto; width:80%; max-width:500px; }
-.progressBar { width:100%; height:20px; background:#334155; border-radius:10px; overflow:hidden; margin-top:5px; }
-.progressFill { height:100%; width:0%; background:linear-gradient(90deg,#22c55e,#16a34a); transition:0.4s; }
 
 input { padding:8px; font-size:16px; width:120px; margin:4px; }
 button { padding:8px 14px; font-size:15px; border:none; border-radius:6px; cursor:pointer; margin:3px; }
-.saveBtn { background:#22c55e; }
-.undoBtn { background:#ef4444; }
 
 .chain { display:flex; flex-wrap:wrap; justify-content:center; max-width:800px; margin:30px auto; gap:8px; }
-.day { width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer; }
-.green { background:linear-gradient(145deg,#22c55e,#16a34a); }
+.day { width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; }
+.green { background:#22c55e; }
 .red { background:#7f1d1d; }
 
-.popup { position:absolute; background:#1e293b; padding:10px 14px; border-radius:8px; box-shadow:0 0 12px #22c55e; font-size:14px; display:none; transform:translate(-50%,-120%); z-index:1000; }
+.progressBar { width:100%; height:20px; background:#334155; border-radius:10px; overflow:hidden; margin-top:5px; }
+.progressFill { height:100%; width:0%; background:#22c55e; }
 </style>
 </head>
 <body>
@@ -40,25 +34,19 @@ button { padding:8px 14px; font-size:15px; border:none; border-radius:6px; curso
 <button id="logoutBtn" style="display:none;">🚪 Đăng xuất</button>
 
 <div id="app" style="display:none;">
-  <div class="stats">
-    Tổng km: <span id="totalKm">0</span> km |
-    Streak: <span id="streak">0</span> ngày 🔥
-  </div>
+  <div>Tổng km: <span id="totalKm">0</span> | Streak: <span id="streak">0</span> 🔥</div>
 
-  <div class="goalBox">
-    🎯 Tháng này: <span id="monthKm">0</span> /
-    <input type="number" id="goalInput" style="width:70px"> km
-    <div class="progressBar"><div class="progressFill" id="progressFill"></div></div>
-  </div>
+  🎯 Tháng này: <span id="monthKm">0</span> /
+  <input type="number" id="goalInput" style="width:70px"> km
+  <div class="progressBar"><div class="progressFill" id="progressFill"></div></div>
 
   <input type="date" id="dateInput">
   <input type="number" id="kmInput" placeholder="Km">
   <input type="number" id="timeInput" placeholder="Phút"><br>
-  <button class="saveBtn" onclick="addRun()">Lưu</button>
-  <button class="undoBtn" onclick="undo()">Hoàn tác</button>
+  <button onclick="addRun()">Lưu</button>
+  <button onclick="undo()">Hoàn tác</button>
 
   <div class="chain" id="chain"></div>
-  <div class="popup" id="popup"></div>
 </div>
 
 <script type="module">
@@ -82,12 +70,23 @@ const db = getFirestore(appFirebase);
 const auth = getAuth();
 const provider = new GoogleAuthProvider();
 
-let user=null, data=[], lastAction=null;
+const googleBtn = document.getElementById("googleBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const authBox = document.getElementById("authBox");
+const app = document.getElementById("app");
+const goalInput = document.getElementById("goalInput");
+const totalKmSpan = document.getElementById("totalKm");
+const monthKmSpan = document.getElementById("monthKm");
+const progressFill = document.getElementById("progressFill");
+const streakSpan = document.getElementById("streak");
+const chain = document.getElementById("chain");
+
+let user=null, data=[];
 
 googleBtn.onclick=()=>signInWithPopup(auth,provider);
 logoutBtn.onclick=()=>signOut(auth);
 
-window.register=()=>createUserWithEmailAndPassword(auth,email.value,password.value).then(()=>alert("Đăng ký OK")).catch(e=>alert(e.message));
+window.register=()=>createUserWithEmailAndPassword(auth,email.value,password.value).catch(e=>alert(e.message));
 window.loginEmail=()=>signInWithEmailAndPassword(auth,email.value,password.value).catch(e=>alert(e.message));
 
 onAuthStateChanged(auth, async(u)=>{
@@ -102,10 +101,8 @@ onAuthStateChanged(auth, async(u)=>{
       const d=snap.data();
       data=d.data||[];
       goalInput.value=d.goal||100;
-    } else {
-      data=[];
-      goalInput.value=100;
-    }
+    } else { data=[]; goalInput.value=100; }
+
     render();
   } else {
     authBox.style.display="block";
@@ -121,13 +118,12 @@ window.addRun=function(){
   let km=parseFloat(kmInput.value);
   let time=parseInt(timeInput.value);
   if(!dateInput.value||isNaN(km)||isNaN(time))return;
-
   data=data.filter(d=>d.date!==date);
   data.push({date,km,time});
   saveOnline(); render();
 }
 
-window.undo=function(){ if(lastAction){data.push(lastAction);saveOnline();render();} }
+window.undo=function(){}
 
 function render(){
   chain.innerHTML="";
@@ -139,23 +135,14 @@ function render(){
     if(dt.getMonth()===now.getMonth()&&dt.getFullYear()===now.getFullYear())monthKm+=d.km;
   });
 
-  totalKm.innerText=total.toFixed(1);
-  monthKm.innerText=monthKm.toFixed(1);
-
-  let goal=parseFloat(goalInput.value)||100;
-  progressFill.style.width=Math.min((monthKm/goal)*100,100)+"%";
-
-  let sorted=[...data].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  let checkDate=new Date();
-  for(let d of sorted){
-    if(new Date(d.date).toDateString()===checkDate.toDateString()&&d.km>=10){streak++;checkDate.setDate(checkDate.getDate()-1);} else break;
-  }
-  streakSpan.innerText=streak;
+  totalKmSpan.innerText=total.toFixed(1);
+  monthKmSpan.innerText=monthKm.toFixed(1);
+  progressFill.style.width=Math.min((monthKm/(goalInput.value||100))*100,100)+"%";
 
   let map={}; data.forEach(d=>map[d.date]=d);
   for(let i=29;i>=0;i--){
-    let d=new Date();d.setDate(d.getDate()-i);
-    let ds=d.toDateString();let rec=map[ds];
+    let d=new Date(); d.setDate(d.getDate()-i);
+    let ds=d.toDateString(); let rec=map[ds];
     let div=document.createElement("div");
     div.className="day "+(rec?(rec.km>=10?"green":"red"):"red");
     div.innerHTML=rec?rec.km:"0";

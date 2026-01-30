@@ -1,49 +1,193 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <title>Login</title>
+<meta charset="UTF-8" />
+<title>Run Streak Cloud</title>
+<style>
+body { font-family: Arial; background:#0f172a; color:white; text-align:center; }
+h1 { color:#38bdf8; }
+.stats { margin:15px; font-size:18px; }
+
+.goalBox { margin:15px auto; width:80%; max-width:500px; }
+.progressBar { width:100%; height:20px; background:#334155; border-radius:10px; overflow:hidden; margin-top:5px; }
+.progressFill { height:100%; width:0%; background:linear-gradient(90deg,#22c55e,#16a34a); transition:0.4s; }
+
+input { padding:8px; font-size:16px; width:120px; margin:4px; }
+button { padding:8px 14px; font-size:15px; border:none; border-radius:6px; cursor:pointer; margin:3px; }
+.saveBtn { background:#22c55e; }
+.undoBtn { background:#ef4444; }
+
+.chain { display:flex; flex-wrap:wrap; justify-content:center; max-width:800px; margin:30px auto; gap:8px; }
+.day { width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer; transition:0.2s; }
+.day:hover { transform:scale(1.1); }
+
+.green { background:linear-gradient(145deg,#22c55e,#16a34a); box-shadow:0 0 12px #22c55e; }
+.red { background:#7f1d1d; }
+.blink { animation: blink 1s infinite alternate; }
+@keyframes blink { from{box-shadow:0 0 5px red;} to{box-shadow:0 0 20px red;} }
+
+.popup { position:absolute; background:#1e293b; padding:10px 14px; border-radius:8px; box-shadow:0 0 12px #22c55e; font-size:14px; display:none; transform:translate(-50%,-120%); z-index:1000; }
+</style>
 </head>
 <body>
 
-<h2>Đăng nhập</h2>
+<h1>🏃 Run Streak Cloud</h1>
 
-<input type="email" id="email" placeholder="Email"><br><br>
-<input type="password" id="password" placeholder="Password"><br><br>
+<button id="loginBtn">🔐 Đăng nhập Google</button>
+<button id="logoutBtn" style="display:none;">🚪 Đăng xuất</button>
 
-<button onclick="signUp()">Đăng ký</button>
-<button onclick="signIn()">Đăng nhập</button>
+<div id="app" style="display:none;">
 
-<p id="msg"></p>
+<div class="stats">
+Tổng km: <span id="totalKm">0</span> km |
+Streak: <span id="streak">0</span> ngày 🔥
+</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<div class="goalBox">
+🎯 Tháng này: <span id="monthKm">0</span> /
+<input type="number" id="goalInput" style="width:70px"> km
+<div class="progressBar"><div class="progressFill" id="progressFill"></div></div>
+</div>
 
-<script>
-  const SUPABASE_URL = "https://xvngdxnrezlycdinvvpn.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_ck_TXnPU_0GCKjse13Wdtg_YC3UMMCm";
+<input type="date" id="dateInput">
+<input type="number" id="kmInput" placeholder="Km">
+<input type="number" id="timeInput" placeholder="Phút chạy"><br>
+<button class="saveBtn" onclick="addRun()">Lưu</button>
+<button class="undoBtn" onclick="undo()">Hoàn tác</button>
 
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+<div class="chain" id="chain"></div>
+<div class="popup" id="popup"></div>
+</div>
 
-  async function signUp() {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    const { error } = await supabase.auth.signUp({ email, password });
+const firebaseConfig = {
+  apiKey: "AIzaSyCgwqXrG0MzYZxWHmaNgcAE1h5HG0zNhSI",
+  authDomain: "runm2026.firebaseapp.com",
+  projectId: "runm2026",
+  storageBucket: "runm2026.firebasestorage.app",
+  messagingSenderId: "353845948909",
+  appId: "1:353845948909:web:b0d3c35408009119a7b7e4"
+};
 
-    document.getElementById("msg").innerText =
-      error ? error.message : "Đăng ký thành công!";
+const appFirebase = initializeApp(firebaseConfig);
+const db = getFirestore(appFirebase);
+const auth = getAuth();
+const provider = new GoogleAuthProvider();
+
+let user=null, data=[], lastAction=null, activeDate=null;
+
+loginBtn.onclick=()=>signInWithPopup(auth,provider);
+logoutBtn.onclick=()=>signOut(auth);
+
+onAuthStateChanged(auth, async(u)=>{
+  if(u){
+    user=u;
+    loginBtn.style.display="none";
+    logoutBtn.style.display="inline-block";
+    app.style.display="block";
+
+    const snap=await getDoc(doc(db,"runs",user.uid));
+    if(snap.exists()){
+      const d=snap.data();
+      data=d.data||[];
+      goalInput.value=d.goal||100;
+    } else goalInput.value=100;
+
+    render();
+  } else {
+    user=null;
+    loginBtn.style.display="inline-block";
+    logoutBtn.style.display="none";
+    app.style.display="none";
   }
+});
 
-  async function signIn() {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
+function saveOnline(){
+  if(user) setDoc(doc(db,"runs",user.uid),{data,goal:goalInput.value});
+}
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+window.addRun=function(){
+  let date=new Date(dateInput.value).toDateString();
+  let km=parseFloat(kmInput.value);
+  let time=parseInt(timeInput.value);
+  if(!dateInput.value||isNaN(km)||isNaN(time))return alert("Nhập đủ!");
 
-    document.getElementById("msg").innerText =
-      error ? error.message : "Đăng nhập thành công!";
+  let existing=data.find(d=>d.date===date);
+  lastAction=existing?{...existing}:null;
+
+  data=data.filter(d=>d.date!==date);
+  data.push({date,km,time});
+  saveOnline(); render();
+}
+
+window.undo=function(){
+  if(lastAction){
+    data=data.filter(d=>d.date!==lastAction.date);
+    data.push(lastAction);
+    saveOnline(); render();
   }
+}
+
+window.togglePopup=function(e,date,km,time){
+  if(activeDate===date){popup.style.display="none";activeDate=null;return;}
+  activeDate=date;
+  popup.innerHTML=`📅 ${new Date(date).toLocaleDateString()}<br>🏃 ${km} km<br>⏱ ${time} phút`;
+  let r=e.currentTarget.getBoundingClientRect();
+  popup.style.left=r.left+r.width/2+"px";
+  popup.style.top=r.top+window.scrollY+"px";
+  popup.style.display="block";
+}
+
+goalInput.oninput=()=>saveOnline();
+
+function render(){
+  chain.innerHTML="";
+  let total=0,streak=0,monthKm=0,now=new Date();
+
+  data.forEach(d=>{
+    total+=d.km;
+    let dt=new Date(d.date);
+    if(dt.getMonth()===now.getMonth()&&dt.getFullYear()===now.getFullYear())monthKm+=d.km;
+  });
+
+  totalKm.innerText=total.toFixed(1);
+  monthKm.innerText=monthKm.toFixed(1);
+
+  let goal=parseFloat(goalInput.value)||100;
+  let percent=Math.min((monthKm/goal)*100,100);
+  progressFill.style.width=percent+"%";
+  progressFill.style.background=percent>=100?"gold":"linear-gradient(90deg,#22c55e,#16a34a)";
+
+  let sorted=[...data].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  let checkDate=new Date();
+  for(let d of sorted){
+    if(new Date(d.date).toDateString()===checkDate.toDateString()&&d.km>=10){streak++;checkDate.setDate(checkDate.getDate()-1);}
+    else break;
+  }
+  streakSpan.innerText=streak;
+
+  let map={}; data.forEach(d=>map[d.date]=d);
+  for(let i=29;i>=0;i--){
+    let d=new Date();d.setDate(d.getDate()-i);
+    let ds=d.toDateString();let rec=map[ds];
+    let div=document.createElement("div");
+    if(rec){
+      div.className="day "+(rec.km>=10?"green":"red");
+      div.innerHTML=rec.km;
+      div.onclick=(e)=>togglePopup(e,rec.date,rec.km,rec.time);
+    } else {
+      div.className="day red blink";
+      div.innerHTML="0";
+      div.onclick=(e)=>togglePopup(e,ds,0,0);
+    }
+    chain.appendChild(div);
+  }
+}
 </script>
-
 </body>
 </html>

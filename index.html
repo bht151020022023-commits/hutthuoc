@@ -6,15 +6,12 @@
 <style>
 body { font-family: Arial; background:#0f172a; color:white; text-align:center; }
 h1 { color:#38bdf8; }
-
 input { padding:8px; font-size:16px; width:120px; margin:4px; }
 button { padding:8px 14px; font-size:15px; border:none; border-radius:6px; cursor:pointer; margin:3px; }
-
 .chain { display:flex; flex-wrap:wrap; justify-content:center; max-width:800px; margin:30px auto; gap:8px; }
 .day { width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; }
 .green { background:#22c55e; }
 .red { background:#7f1d1d; }
-
 .progressBar { width:100%; height:20px; background:#334155; border-radius:10px; overflow:hidden; margin-top:5px; }
 .progressFill { height:100%; width:0%; background:#22c55e; }
 </style>
@@ -64,7 +61,7 @@ const firebaseConfig = {
   appId: "1:353845948909:web:b0d3c35408009119a7b7e4"
 };
 
-const ALLOWED_EMAIL = "2051200028@vaa.edu.vn"; // 🔥 ĐỔI EMAIL Ở ĐÂY
+const ALLOWED_EMAIL = "2051200028@vaa.edu.vn"; // 🔥 EMAIL DUY NHẤT
 
 const appFirebase = initializeApp(firebaseConfig);
 const db = getFirestore(appFirebase);
@@ -87,22 +84,15 @@ let user=null, data=[];
 googleBtn.onclick=()=>signInWithPopup(auth,provider);
 logoutBtn.onclick=()=>signOut(auth);
 
-window.register = () => {
-  const emailVal = email.value;
-  const passVal = password.value;
-  createUserWithEmailAndPassword(auth, emailVal, passVal).catch(e => alert(e.message));
-}
-
-window.loginEmail = () => {
-  const emailVal = email.value;
-  const passVal = password.value;
-  signInWithEmailAndPassword(auth, emailVal, passVal).catch(e => alert(e.message));
-}
+window.register=()=>createUserWithEmailAndPassword(auth,email.value,password.value).catch(e=>alert(e.message));
+window.loginEmail=()=>signInWithEmailAndPassword(auth,email.value,password.value).catch(e=>alert(e.message));
 
 onAuthStateChanged(auth, async(u)=>{
   if(u){
 
-    if(u.email !== ALLOWED_EMAIL){
+    console.log("EMAIL LOGIN:", u.email);
+
+    if(u.email.toLowerCase().trim() !== ALLOWED_EMAIL.toLowerCase()){
       alert("Tài khoản này không được phép truy cập!");
       await signOut(auth);
       return;

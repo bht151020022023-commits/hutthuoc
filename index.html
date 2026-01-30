@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8" />
-<title>Run Streak Cloud</title>
+<title>Run Streak Private</title>
 <style>
 body { font-family: Arial; background:#0f172a; color:white; text-align:center; }
 h1 { color:#38bdf8; }
@@ -21,7 +21,7 @@ button { padding:8px 14px; font-size:15px; border:none; border-radius:6px; curso
 </head>
 <body>
 
-<h1>🏃 Run Streak Cloud</h1>
+<h1>🏃 Run Streak Private</h1>
 
 <div id="authBox">
   <input type="email" id="email" placeholder="Email">
@@ -44,7 +44,6 @@ button { padding:8px 14px; font-size:15px; border:none; border-radius:6px; curso
   <input type="number" id="kmInput" placeholder="Km">
   <input type="number" id="timeInput" placeholder="Phút"><br>
   <button onclick="addRun()">Lưu</button>
-  <button onclick="undo()">Hoàn tác</button>
 
   <div class="chain" id="chain"></div>
 </div>
@@ -64,6 +63,8 @@ const firebaseConfig = {
   messagingSenderId: "353845948909",
   appId: "1:353845948909:web:b0d3c35408009119a7b7e4"
 };
+
+const ALLOWED_EMAIL = "2051200028@vaa.edu.vn"; // 🔥 ĐỔI EMAIL Ở ĐÂY
 
 const appFirebase = initializeApp(firebaseConfig);
 const db = getFirestore(appFirebase);
@@ -86,11 +87,27 @@ let user=null, data=[];
 googleBtn.onclick=()=>signInWithPopup(auth,provider);
 logoutBtn.onclick=()=>signOut(auth);
 
-window.register=()=>createUserWithEmailAndPassword(auth,email.value,password.value).catch(e=>alert(e.message));
-window.loginEmail=()=>signInWithEmailAndPassword(auth,email.value,password.value).catch(e=>alert(e.message));
+window.register = () => {
+  const emailVal = email.value;
+  const passVal = password.value;
+  createUserWithEmailAndPassword(auth, emailVal, passVal).catch(e => alert(e.message));
+}
+
+window.loginEmail = () => {
+  const emailVal = email.value;
+  const passVal = password.value;
+  signInWithEmailAndPassword(auth, emailVal, passVal).catch(e => alert(e.message));
+}
 
 onAuthStateChanged(auth, async(u)=>{
   if(u){
+
+    if(u.email !== ALLOWED_EMAIL){
+      alert("Tài khoản này không được phép truy cập!");
+      await signOut(auth);
+      return;
+    }
+
     user=u;
     authBox.style.display="none";
     logoutBtn.style.display="inline-block";
@@ -122,8 +139,6 @@ window.addRun=function(){
   data.push({date,km,time});
   saveOnline(); render();
 }
-
-window.undo=function(){}
 
 function render(){
   chain.innerHTML="";

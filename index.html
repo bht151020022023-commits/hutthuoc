@@ -1,55 +1,37 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
 <meta charset="UTF-8" />
 <title>Run Streak Private</title>
 <style>
 body { font-family: Arial; background:#0f172a; color:white; text-align:center; }
 h1 { color:#38bdf8; }
-input { padding:8px; font-size:16px; width:120px; margin:4px; }
-button { padding:8px 14px; font-size:15px; border:none; border-radius:6px; cursor:pointer; margin:3px; }
 .chain { display:flex; flex-wrap:wrap; justify-content:center; max-width:800px; margin:30px auto; gap:8px; }
 .day { width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; }
 .green { background:#22c55e; }
 .red { background:#7f1d1d; }
-.progressBar { width:100%; height:20px; background:#334155; border-radius:10px; overflow:hidden; margin-top:5px; }
-.progressFill { height:100%; width:0%; background:#22c55e; }
 </style>
 </head>
 <body>
 
-<h1>🏃 Run Streak Private</h1>
+<h1>🔒 Run Streak (Private)</h1>
 
-<div id="authBox">
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Mật khẩu"><br>
-  <button onclick="register()">📝 Đăng ký</button>
-  <button onclick="loginEmail()">🔑 Đăng nhập Email</button>
-  <button id="googleBtn">🔐 Đăng nhập Google</button>
-</div>
-
+<button id="googleBtn">🔐 Đăng nhập bằng Google</button>
 <button id="logoutBtn" style="display:none;">🚪 Đăng xuất</button>
 
 <div id="app" style="display:none;">
-  <div>Tổng km: <span id="totalKm">0</span> | Streak: <span id="streak">0</span> 🔥</div>
-
-  🎯 Tháng này: <span id="monthKm">0</span> /
-  <input type="number" id="goalInput" style="width:70px"> km
-  <div class="progressBar"><div class="progressFill" id="progressFill"></div></div>
-
+  <div>Tổng km: <span id="totalKm">0</span> | Streak: <span id="streak">0</span></div>
   <input type="date" id="dateInput">
   <input type="number" id="kmInput" placeholder="Km">
-  <input type="number" id="timeInput" placeholder="Phút"><br>
+  <input type="number" id="timeInput" placeholder="Phút">
   <button onclick="addRun()">Lưu</button>
-
   <div class="chain" id="chain"></div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut,
-createUserWithEmailAndPassword, signInWithEmailAndPassword } 
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } 
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -61,7 +43,7 @@ const firebaseConfig = {
   appId: "1:353845948909:web:b0d3c35408009119a7b7e4"
 };
 
-const ALLOWED_EMAIL = "2051200028@vaa.edu.vn"; // 🔥 EMAIL DUY NHẤT
+const ALLOWED_EMAIL = "2051200028@vaa.edu.vn";
 
 const appFirebase = initializeApp(firebaseConfig);
 const db = getFirestore(appFirebase);
@@ -70,13 +52,7 @@ const provider = new GoogleAuthProvider();
 
 const googleBtn = document.getElementById("googleBtn");
 const logoutBtn = document.getElementById("logoutBtn");
-const authBox = document.getElementById("authBox");
 const app = document.getElementById("app");
-const goalInput = document.getElementById("goalInput");
-const totalKmSpan = document.getElementById("totalKm");
-const monthKmSpan = document.getElementById("monthKm");
-const progressFill = document.getElementById("progressFill");
-const streakSpan = document.getElementById("streak");
 const chain = document.getElementById("chain");
 
 let user=null, data=[];
@@ -84,41 +60,27 @@ let user=null, data=[];
 googleBtn.onclick=()=>signInWithPopup(auth,provider);
 logoutBtn.onclick=()=>signOut(auth);
 
-window.register=()=>createUserWithEmailAndPassword(auth,email.value,password.value).catch(e=>alert(e.message));
-window.loginEmail=()=>signInWithEmailAndPassword(auth,email.value,password.value).catch(e=>alert(e.message));
-
 onAuthStateChanged(auth, async(u)=>{
   if(u){
 
-    console.log("EMAIL LOGIN:", u.email);
-
     if(u.email.toLowerCase().trim() !== ALLOWED_EMAIL.toLowerCase()){
-      alert("Tài khoản này không được phép truy cập!");
+      alert("Bạn không có quyền truy cập app này!");
       await signOut(auth);
       return;
     }
 
     user=u;
-    authBox.style.display="none";
+    googleBtn.style.display="none";
     logoutBtn.style.display="inline-block";
     app.style.display="block";
 
     const snap=await getDoc(doc(db,"runs",user.uid));
-    if(snap.exists()){
-      const d=snap.data();
-      data=d.data||[];
-      goalInput.value=d.goal||100;
-    } else { data=[]; goalInput.value=100; }
-
+    if(snap.exists()) data=snap.data().data||[];
     render();
-  } else {
-    authBox.style.display="block";
-    logoutBtn.style.display="none";
-    app.style.display="none";
   }
 });
 
-function saveOnline(){ if(user) setDoc(doc(db,"runs",user.uid),{data,goal:goalInput.value}); }
+function saveOnline(){ if(user) setDoc(doc(db,"runs",user.uid),{data}); }
 
 window.addRun=function(){
   let date=new Date(dateInput.value).toDateString();
@@ -132,18 +94,6 @@ window.addRun=function(){
 
 function render(){
   chain.innerHTML="";
-  let total=0,monthKm=0,streak=0,now=new Date();
-
-  data.forEach(d=>{
-    total+=d.km;
-    let dt=new Date(d.date);
-    if(dt.getMonth()===now.getMonth()&&dt.getFullYear()===now.getFullYear())monthKm+=d.km;
-  });
-
-  totalKmSpan.innerText=total.toFixed(1);
-  monthKmSpan.innerText=monthKm.toFixed(1);
-  progressFill.style.width=Math.min((monthKm/(goalInput.value||100))*100,100)+"%";
-
   let map={}; data.forEach(d=>map[d.date]=d);
   for(let i=29;i>=0;i--){
     let d=new Date(); d.setDate(d.getDate()-i);
